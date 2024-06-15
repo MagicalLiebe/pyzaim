@@ -2,6 +2,7 @@ import calendar
 import datetime
 import os
 import time
+import webbrowser
 
 from requests_oauthlib import OAuth1Session
 from selenium.webdriver import Chrome, ChromeOptions, Remote
@@ -29,7 +30,7 @@ def get_access_token():
 
     # Redirect user to zaim for authorization
     authorization_url = auth.authorization_url(authorize_url)
-    print("Please go here and authorize : ", authorization_url)
+    webbrowser.open(authorization_url)
 
     oauth_verifier = input("Please input oauth verifier : ")
     access_token_res = auth.fetch_access_token(
