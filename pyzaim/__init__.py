@@ -1,1 +1,3 @@
-from .pyzaim import ZaimAPI, ZaimCrawler, get_access_token
+from .pyzaim import ZaimAPI, ZaimCrawler
+
+__all__ = ["ZaimAPI", "ZaimCrawler"]
