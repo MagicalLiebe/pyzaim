@@ -35,15 +35,21 @@ def run_server():
     app.run()
 
 
-def get_access_token():
-    consumer_id = input("Please input consumer ID : ")
-    consumer_secret = input("Please input consumer secret : ")
+def get_access_token(consumer_id: str, consumer_secret: str) -> tuple[str, str, str]:
+    """
+    Get access token for Zaim API.
+    :param consumer_id: Consumer ID
+    :param consumer_secret: Consumer Secret
+    :return: Tuple of access token, access token secret, and oauth verifier
+    """
     server_thread = threading.Thread(target=run_server)
     server_thread.daemon = True
     server_thread.start()
     print("\n")
 
-    auth = OAuth1Session(client_key=consumer_id, client_secret=consumer_secret, callback_uri=callback_uri)
+    auth = OAuth1Session(
+        client_key=consumer_id, client_secret=consumer_secret, callback_uri=callback_uri
+    )
 
     auth.fetch_request_token(request_token_url)
 
@@ -53,25 +59,22 @@ def get_access_token():
     print("Please go here and authorize : ", authorization_url)
 
     oauth_verifier = input("Please input oauth verifier : ")
-    access_token_res = auth.fetch_access_token(url=access_token_url, verifier=oauth_verifier)
+    access_token_res = auth.fetch_access_token(
+        url=access_token_url, verifier=oauth_verifier
+    )
     access_token = access_token_res.get("oauth_token")
     access_token_secret = access_token_res.get("oauth_token_secret")
 
-    print("\n")
-    print("access token : {}".format(access_token))
-    print("access token secret : {}".format(access_token_secret))
-    print("oauth verifier : {}".format(oauth_verifier))
+    return access_token, access_token_secret, oauth_verifier
 
 
 class ZaimAPI:
-    def __init__(
-        self,
-        consumer_id,
-        consumer_secret,
-        access_token,
-        access_token_secret,
-        oauth_verifier,
-    ):
+    def __init__(self, consumer_id: str, consumer_secret: str) -> None:
+        """
+        Initialize ZaimAPI.
+        :param consumer_id: Consumer ID
+        :param consumer_secret: Consumer Secret
+        """
         self.consumer_id = consumer_id
         self.consumer_secret = consumer_secret
 
@@ -85,13 +88,17 @@ class ZaimAPI:
         self.account_url = "https://api.zaim.net/v2/home/account"
         self.currency_url = "https://api.zaim.net/v2/currency"
 
+        self.access_token, self.access_token_secret, self.oauth_verifier = (
+            get_access_token(consumer_id, consumer_secret)
+        )
+
         self.auth = OAuth1Session(
             client_key=self.consumer_id,
             client_secret=self.consumer_secret,
-            resource_owner_key=access_token,
-            resource_owner_secret=access_token_secret,
+            resource_owner_key=self.access_token,
+            resource_owner_secret=self.access_token_secret,
             callback_uri=callback_uri,
-            verifier=oauth_verifier,
+            verifier=self.oauth_verifier,
         )
 
         self._build_id_table()
@@ -120,7 +127,15 @@ class ZaimAPI:
         else:
             from_account_id = None
         return self.insert_payment(
-            date, amount, category_id, genre_id, from_account_id, comment, name, place, receipt_id
+            date,
+            amount,
+            category_id,
+            genre_id,
+            from_account_id,
+            comment,
+            name,
+            place,
+            receipt_id,
         )
 
     def insert_payment(
@@ -221,15 +236,21 @@ class ZaimAPI:
     def delete_payment(self, data_id):
         return self.auth.delete("{}/{}".format(self.payment_url, data_id))
 
-    def insert_income_simple(self, date, category, amount, to_account=None, comment=None, place=None):
+    def insert_income_simple(
+        self, date, category, amount, to_account=None, comment=None, place=None
+    ):
         category_id = self.category_stoi[category]
         if to_account is not None:
             to_account_id = self.account_stoi[to_account]
         else:
             to_account_id = None
-        return self.insert_income(date, category_id, amount, to_account_id, comment, place)
+        return self.insert_income(
+            date, category_id, amount, to_account_id, comment, place
+        )
 
-    def insert_income(self, date, category_id, amount, to_account_id=None, comment=None, place=None):
+    def insert_income(
+        self, date, category_id, amount, to_account_id=None, comment=None, place=None
+    ):
         data = {
             "mapping": 1,
             "category_id": category_id,
@@ -244,13 +265,17 @@ class ZaimAPI:
             data["place"] = place
         return self.auth.post(self.income_url, data=data)
 
-    def update_income_simple(self, data_id, date, category, amount, to_account=None, comment=None, place=None):
+    def update_income_simple(
+        self, data_id, date, category, amount, to_account=None, comment=None, place=None
+    ):
         category_id = self.category_stoi[category]
         if to_account is not None:
             to_account_id = self.account_stoi[to_account]
         else:
             to_account_id = None
-        return self.update_income(data_id, date, category_id, amount, to_account_id, comment, place)
+        return self.update_income(
+            data_id, date, category_id, amount, to_account_id, comment, place
+        )
 
     def update_income(
         self,
@@ -280,12 +305,18 @@ class ZaimAPI:
     def delete_income(self, data_id):
         return self.auth.delete("{}/{}".format(self.income_url, data_id))
 
-    def insert_transfer_simple(self, date, amount, from_account, to_account, comment=None):
+    def insert_transfer_simple(
+        self, date, amount, from_account, to_account, comment=None
+    ):
         from_account_id = self.account_stoi[from_account]
         to_account_id = self.account_stoi[to_account]
-        return self.insert_transfer(date, amount, from_account_id, to_account_id, comment)
+        return self.insert_transfer(
+            date, amount, from_account_id, to_account_id, comment
+        )
 
-    def insert_transfer(self, date, amount, from_account_id, to_account_id, comment=None):
+    def insert_transfer(
+        self, date, amount, from_account_id, to_account_id, comment=None
+    ):
         data = {
             "mapping": 1,
             "amount": amount,
@@ -297,12 +328,18 @@ class ZaimAPI:
             data["comment"] = comment
         return self.auth.post(self.transfer_url, data=data)
 
-    def update_transfer_simple(self, data_id, date, amount, from_account, to_account, comment=None):
+    def update_transfer_simple(
+        self, data_id, date, amount, from_account, to_account, comment=None
+    ):
         from_account_id = self.account_stoi[from_account]
         to_account_id = self.account_stoi[to_account]
-        return self.update_transfer(data_id, date, amount, from_account_id, to_account_id, comment)
+        return self.update_transfer(
+            data_id, date, amount, from_account_id, to_account_id, comment
+        )
 
-    def update_transfer(self, data_id, date, amount, from_account_id, to_account_id, comment=None):
+    def update_transfer(
+        self, data_id, date, amount, from_account_id, to_account_id, comment=None
+    ):
         data = {
             "mapping": 1,
             "id": data_id,
@@ -351,7 +388,9 @@ class ZaimAPI:
 
 
 class ZaimCrawler:
-    def __init__(self, user_id, password, driver_path=None, headless=False, poor=False, gcf=False):
+    def __init__(
+        self, user_id, password, driver_path=None, headless=False, poor=False, gcf=False
+    ):
         options = ChromeOptions()
 
         if gcf:
@@ -377,7 +416,9 @@ class ZaimCrawler:
                 options.add_argument("--headless")
             if headless:
                 options.add_argument("--headless")
-            if driver_path == "remote":  # リモート接続も可能（docker-seleniumの利用を想定）
+            if (
+                driver_path == "remote"
+            ):  # リモート接続も可能（docker-seleniumの利用を想定）
                 options.set_capability("pageLoadStrategy", "eager")
                 self.driver = Remote(
                     command_executor="http://localhost:4444/wd/hub",
@@ -445,19 +486,42 @@ class ZaimCrawler:
             items = line.find_elements(by=By.TAG_NAME, value="div")
 
             item = {}
-            item["id"] = items[0].find_element(by=By.TAG_NAME, value="i").get_attribute("data-url").split("/")[2]
+            item["id"] = (
+                items[0]
+                .find_element(by=By.TAG_NAME, value="i")
+                .get_attribute("data-url")
+                .split("/")[2]
+            )
 
             # 前ループの読み込み内容と重複がある場合はスキップする
-            flg_duplicate = next((data["id"] for data in self.data if data["id"] == item["id"]), None)
+            flg_duplicate = next(
+                (data["id"] for data in self.data if data["id"] == item["id"]), None
+            )
             if flg_duplicate:
                 continue
 
-            item["count"] = items[1].find_element(by=By.TAG_NAME, value="i").get_attribute("title").split("（")[0]
+            item["count"] = (
+                items[1]
+                .find_element(by=By.TAG_NAME, value="i")
+                .get_attribute("title")
+                .split("（")[0]
+            )
             date = items[2].text.split("（")[0]
-            item["date"] = datetime.datetime.strptime("{}年{}".format(year, date), "%Y年%m月%d日")
-            item["category"] = items[3].find_element(by=By.TAG_NAME, value="span").get_attribute("data-title")
+            item["date"] = datetime.datetime.strptime(
+                "{}年{}".format(year, date), "%Y年%m月%d日"
+            )
+            item["category"] = (
+                items[3]
+                .find_element(by=By.TAG_NAME, value="span")
+                .get_attribute("data-title")
+            )
             item["genre"] = items[3].find_elements(by=By.TAG_NAME, value="span")[1].text
-            item["amount"] = int(items[4].find_element(by=By.TAG_NAME, value="span").text.strip("¥").replace(",", ""))
+            item["amount"] = int(
+                items[4]
+                .find_element(by=By.TAG_NAME, value="span")
+                .text.strip("¥")
+                .replace(",", "")
+            )
             m_from = items[5].find_elements(by=By.TAG_NAME, value="img")
             if len(m_from) != 0:
                 item["from_account"] = m_from[0].get_attribute("data-title")
@@ -467,7 +531,13 @@ class ZaimCrawler:
             item["type"] = (
                 "transfer"
                 if "from_account" in item and "to_account" in item
-                else ("payment" if "from_account" in item else "income" if "to_account" in item else None)
+                else (
+                    "payment"
+                    if "from_account" in item
+                    else "income"
+                    if "to_account" in item
+                    else None
+                )
             )
             item["place"] = items[7].find_element(by=By.TAG_NAME, value="span").text
             item["name"] = items[8].find_element(by=By.TAG_NAME, value="span").text
@@ -487,7 +557,9 @@ class ZaimCrawler:
             .get_attribute("data-url")
             .split("/")[2]
         )
-        self.driver.execute_script("arguments[0].scrollIntoView(true);", lines[len(lines) - 1])
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView(true);", lines[len(lines) - 1]
+        )
         time.sleep(0.1)
         next_id = (
             self.driver.find_element(

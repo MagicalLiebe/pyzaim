@@ -31,11 +31,17 @@ pip install pyzaim
 - Zaim Developersでのアプリケーションの登録 (コンシューマID、コンシューマシークレットの発行)
 
   1. https://dev.zaim.net/users/login にアクセスし、新しいアプリケーションを追加
-  1. ブラウザアプリを選択し、サービスのURLに以下を入力
-        ```
-        http://127.0.0.1:5000/callback
-        ```
-  1. コンシューマID、コンシューマシークレットが発行される 
+  1. 「ブラウザアプリ」を選択し、サービスのURLに以下を入力
+    ```
+    http://127.0.0.1:5000/callback
+    ```
+  1. コンシューマID、コンシューマシークレットが発行される
+
+- `.env`ファイルの作成 (必須ではないが作成しておくと便利)
+  ```
+  CONSUMER_ID=(ここにコンシューマIDを記入、括弧は不要)
+  CONSUMER_SECRET=(ここにコンシューマシークレットを記入、括弧は不要)
+  ```
 - Google Chromeおよびseleniumの導入
 
 ## 使い方
@@ -45,34 +51,34 @@ pip install pyzaim
 - アクセストークンの発行
 
 ```python
-from pyzaim import get_access_token
+import os
+from dotenv import load_dotenv
+from pyzaim import ZaimAPI
 
-get_access_token()
+load_dotenv()
 
-# コンシューマIDとコンシューマシークレットを聞かれるので入力
+CONSUMER_ID = os.environ.get("CONSUMER_ID")
+CONSUMER_SECRET = os.environ.get("CONSUMER_SECRET")
+
+api = ZaimAPI(CONSUMER_ID, CONSUMER_SECRET)
+
 # 認証ページのURLが表示されるので、アクセスして許可
 # 遷移先ページのcopyボタンを押して、oauth_verifierをコピー
 # コピーしたoauth_verifierを入力
-# 問題なければアクセストークンとアクセスシークレットが表示される
+
+# 動作確認 (ユーザーID等のデータが取得されて、表示されればOK)
+print(api.verify())
 ```
 
 - APIを利用してデータを取得・操作
 
 ```python
-from pyzaim import ZaimAPI
-
-api = ZaimAPI('コンシューマID', 'コンシューマシークレット',
-              'アクセストークン', 'アクセスシークレット', 'verifier')
-
-# 動作確認 (ユーザーID等のデータが取得されて、表示されればOK)
-print(api.verify())
-
 # データの取得
 data = api.get_data()
 
 # 支払いデータの登録
 api.insert_payment_simple('日付(datetime.date型)', '金額(int)', 'ジャンル名',
-                          '口座名', 'コメント', '品名', '店舗名') # 後半4つは任意入力
+                          '口座名', 'コメント', '品名', '店舗名', 'receipt_id') # 後半5つは任意入力
 
 # 使用できるジャンル名は以下で確認できる
 print(api.genre_itos)
@@ -82,11 +88,13 @@ print(api.account_itos)
 
 # 支払いデータの更新 (更新対象データのIDはapi.get_data()で確認)
 api.update_payment_simple('更新対象データのID', '日付(datetime.date型)', '金額(int)',
-                          'ジャンル名', '口座名', 'コメント', '品名', '店舗名') # 後半4つは任意入力
+                          'ジャンル名', '口座名', 'コメント', '品名', '店舗名', 'receipt_id') # 後半5つは任意入力
 
 # 支払いデータの削除
 api.delete_payment('削除対象のデータのID')
 ```
+
+- receipt_idはブラウザ版やモバイルアプリ版の「品目一覧表示」に対応したデータを登録するためのID、詳細な使い方は[こちら](https://github.com/liebe-magi/pyzaim/pull/39)を参照
 
 ### seleniumを用いたデータ取得
 
