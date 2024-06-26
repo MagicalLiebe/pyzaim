@@ -35,39 +35,6 @@ def run_server():
     app.run()
 
 
-def get_access_token(consumer_id: str, consumer_secret: str) -> tuple[str, str, str]:
-    """
-    Get access token for Zaim API.
-    :param consumer_id: Consumer ID
-    :param consumer_secret: Consumer Secret
-    :return: Tuple of access token, access token secret, and oauth verifier
-    """
-    server_thread = threading.Thread(target=run_server)
-    server_thread.daemon = True
-    server_thread.start()
-    print("\n")
-
-    auth = OAuth1Session(
-        client_key=consumer_id, client_secret=consumer_secret, callback_uri=callback_uri
-    )
-
-    auth.fetch_request_token(request_token_url)
-
-    # Redirect user to zaim for authorization
-    authorization_url = auth.authorization_url(authorize_url)
-    print("\n")
-    print("Please go here and authorize : ", authorization_url)
-
-    oauth_verifier = input("Please input oauth verifier : ")
-    access_token_res = auth.fetch_access_token(
-        url=access_token_url, verifier=oauth_verifier
-    )
-    access_token = access_token_res.get("oauth_token")
-    access_token_secret = access_token_res.get("oauth_token_secret")
-
-    return access_token, access_token_secret, oauth_verifier
-
-
 class ZaimAPI:
     def __init__(self, consumer_id: str, consumer_secret: str) -> None:
         """
@@ -88,9 +55,7 @@ class ZaimAPI:
         self.account_url = "https://api.zaim.net/v2/home/account"
         self.currency_url = "https://api.zaim.net/v2/currency"
 
-        self.access_token, self.access_token_secret, self.oauth_verifier = (
-            get_access_token(consumer_id, consumer_secret)
-        )
+        self.get_access_token()
 
         self.auth = OAuth1Session(
             client_key=self.consumer_id,
@@ -102,6 +67,35 @@ class ZaimAPI:
         )
 
         self._build_id_table()
+
+    def get_access_token(self) -> None:
+        """
+        Get access token for Zaim API.
+        """
+        server_thread = threading.Thread(target=run_server)
+        server_thread.daemon = True
+        server_thread.start()
+        print("\n")
+
+        auth = OAuth1Session(
+            client_key=self.consumer_id,
+            client_secret=self.consumer_secret,
+            callback_uri=callback_uri,
+        )
+
+        auth.fetch_request_token(request_token_url)
+
+        # Redirect user to zaim for authorization
+        authorization_url = auth.authorization_url(authorize_url)
+        print("\n")
+        print("Please go here and authorize : ", authorization_url)
+
+        self.oauth_verifier = input("Please input oauth verifier : ")
+        access_token_res = auth.fetch_access_token(
+            url=access_token_url, verifier=self.oauth_verifier
+        )
+        self.access_token = access_token_res.get("oauth_token")
+        self.access_token_secret = access_token_res.get("oauth_token_secret")
 
     def verify(self):
         return self.auth.get(self.verify_url).json()
